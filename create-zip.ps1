@@ -1,0 +1,1 @@
+Publish-AzVMDscConfiguration .\deployrds.ps1 -OutputArchivePath '.\deployrds.zip'
