@@ -8,6 +8,7 @@ Configuration CreateRootDomain {
     )
     $DomainName = $RDSParameters[0].DomainName
     $TimeZoneID = $RDSParameters[0].TimeZoneID
+    $DNSServer  = $RDSParameters[0].DNSServer
     
     Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
