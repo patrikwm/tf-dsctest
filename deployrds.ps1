@@ -6,7 +6,7 @@ Configuration CreateRootDomain {
         [Parameter(Mandatory)]
         [Array]$RDSParameters
     )
-    
+
     $DomainName = $RDSParameters[0].DomainName
     $TimeZoneID = $RDSParameters[0].TimeZoneID
     $DNSServer  = $RDSParameters[0].DNSServer
@@ -14,6 +14,7 @@ Configuration CreateRootDomain {
     $IntBrokerLBIP = $RDSParameters[0].IntBrokerLBIP
     $IntWebGWLBIP = $RDSParameters[0].IntWebGWLBIP
     $WebGWDNS = $RDSParameters[0].WebGWDNS
+    $IntADFSIP = $RDSParameters[0].IntADFSIP
 
     Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
@@ -151,6 +152,17 @@ Configuration CreateRootDomain {
             {
                 Name = $WebGWDNS
                 Target = $IntWebGWLBIP
+                Zone = $ExternalDnsDomain
+                Type = "ARecord"
+                Ensure = "Present"
+                DependsOn = "[Script]AddExternalZone"
+            }
+
+
+            xDnsRecord AddIntADFSIP
+            {
+                Name = "sts"
+                Target = $IntADFSIP
                 Zone = $ExternalDnsDomain
                 Type = "ARecord"
                 Ensure = "Present"
