@@ -28,12 +28,67 @@ Configuration CreateRootDomain {
             Ensure = "Present"
             Name = "DNS"
         }
-        
+
+        TimeZone SetTimeZone
+        {
+            IsSingleInstance = 'Yes'
+            TimeZone = $TimeZoneID
+        }
+       WindowsFeature AD-Domain-Services
+        {
+            Ensure = "Present"
+            Name = "AD-Domain-Services"
+            DependsOn = "[WindowsFeature]DNS"
+        }      
+
+        WindowsFeature DnsTools
+        {
+            Ensure = "Present"
+            Name = "RSAT-DNS-Server"
+            DependsOn = "[WindowsFeature]DNS"
+        }        
+
+        WindowsFeature GPOTools
+        {
+            Ensure = "Present"
+            Name = "GPMC"
+            DependsOn = "[WindowsFeature]DNS"
+        }
+
+        WindowsFeature DFSTools
+        {
+            Ensure = "Present"
+            Name = "RSAT-DFS-Mgmt-Con"
+            DependsOn = "[WindowsFeature]DNS"
+        }        
+
+        WindowsFeature RSAT-AD-Tools
+        {
+            Ensure = "Present"
+            Name = "RSAT-AD-Tools"
+            DependsOn = "[WindowsFeature]AD-Domain-Services"
+            IncludeAllSubFeature = $True
+        }
+
         TimeZone SetTimeZone
         {
             IsSingleInstance = 'Yes'
             TimeZone = $TimeZoneID
         }
 
+        Firewall EnableSMBFwRule
+        {
+            Name = "FPS-SMB-In-TCP"
+            Enabled = $True
+            Ensure = "Present"
+        }
+        
+        xDnsServerAddress DnsServerAddress
+        {
+            Address        = $DNSServer
+            InterfaceAlias = $InterfaceAlias
+            AddressFamily  = 'IPv4'
+            DependsOn = "[WindowsFeature]DNS"
+        }
     }
 }
