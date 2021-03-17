@@ -208,7 +208,15 @@ Configuration CreateRootDomain {
                 Name = 'RebootAfterInstallingAD'
                 DependsOn = @("[xADDomainController]NextDC","[xDnsServerForwarder]SetForwarders")
             }            
-        }        
+        }
+
+        WindowsFeature adfs-federation
+        {
+            Ensure = "Present"
+            Name = "adfs-federation"
+            IncludeAllSubFeature = $True
+            DependsOn = "[PendingReboot]RebootAfterInstallingAD"
+        }         
     }
 }
 
