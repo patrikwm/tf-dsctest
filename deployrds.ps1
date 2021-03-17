@@ -15,6 +15,8 @@ Configuration CreateRootDomain {
     $IntWebGWLBIP = $RDSParameters[0].IntWebGWLBIP
     $WebGWDNS = $RDSParameters[0].WebGWDNS
     $IntADFSIP = $RDSParameters[0].IntADFSIP
+    $CertificateURL = $RDSParameters[0].CertificateURL
+    $SASTOKEN = $RDSParameters[0].SASTOKEN
 
     Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
@@ -216,7 +218,80 @@ Configuration CreateRootDomain {
             Name = "adfs-federation"
             IncludeAllSubFeature = $True
             DependsOn = "[PendingReboot]RebootAfterInstallingAD"
-        }         
+        }
+        Script ConfigureADFS-gmsa
+        {
+            SetScript = {
+                Add-KdsRootKey -EffectiveTime (Get-Date).AddHours(-10)
+                New-ADServiceAccount -Name 'adfs_gmsa' -DNSHostName "sts.${ExternalDnsDomain}" -PrincipalsAllowedToRetrieveManagedPassword 'Domain Controllers'
+            }
+
+            TestScript = {
+                If (Get-ADServiceAccount -Identity 'adfs_gmsa' -ErrorAction SilentlyContinue) {
+                    Return $True
+                } Else {
+                    Return $False
+                }
+            }
+
+            GetScript = {
+                @{
+                    Result = Get-ADServiceAccount -Identity 'adfs_gmsa' -ErrorAction SilentlyContinue
+                }
+            }
+            DependsOn = "[WindowsFeature]adfs-federation"
+        }
+        Script installAZCopy
+        {
+            SetScript = {
+                (Get-Service NTDS).WaitForStatus('Running','00:05:00')
+                (Get-Service ADWS).WaitForStatus('Running','00:05:00')
+                New-Item -Path "c:\" -Name "downloads" -ItemType "directory"
+                Start-BitsTransfer -Source "https://aka.ms/downloadazcopy-v10-windows" -Destination c:\downloads\azcopy.zip
+                Expand-Archive c:\downloads\azcopy.zip c:\downloads\ -Force
+                Get-ChildItem "c:\downloads\*\*.exe" | Move-Item -Destination "C:\Windows\System32\" -Force
+
+            }
+
+            TestScript = {
+                If (get-command azcopy.exe -ErrorAction SilentlyContinue) {
+                    Return $True
+                } Else {
+                    Return $False
+                }
+            }
+
+            GetScript = {
+                @{
+                    Result = get-command azcopy.exe -ErrorAction SilentlyContinue
+                }
+            }
+            DependsOn = "[WindowsFeature]adfs-federation"
+        }
+        Script installCertificate
+        {
+            SetScript = {
+                (Get-Service NTDS).WaitForStatus('Running','00:05:00')
+                (Get-Service ADWS).WaitForStatus('Running','00:05:00')
+                azcopy.exe copy "$CertificateURL$SASTOKEN" "c:\downloads\certificate.pfx"
+                Import-PfxCertificate -FilePath "c:\downloads\certificate.pfx" -CertStoreLocation  Cert:\LocalMachine\My\
+            }
+
+            TestScript = {
+                If (Get-ChildItem  -Path Cert:\LocalMachine\MY | Where-Object {$_.Subject -Like "*$ExternalDnsDomain*"} -ErrorAction SilentlyContinue) {
+                    Return $True
+                } Else {
+                    Return $False
+                }
+            }
+
+            GetScript = {
+                @{
+                    Result = Get-ChildItem  -Path Cert:\LocalMachine\MY | Where-Object {$_.Subject -Like "*$ExternalDnsDomain*"} -ErrorAction SilentlyContinue
+                }
+            }
+            DependsOn = "[Script]installAZCopy"
+        }
     }
 }
 
