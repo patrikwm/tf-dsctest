@@ -15,8 +15,8 @@ Configuration CreateRootDomain {
     $MyIP = ($Interface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
     $InterfaceAlias = $($Interface.Name)
 
-    Node localhost {
-
+    Node localhost
+    {
         LocalConfigurationManager
         {
             RebootNodeIfNeeded = $true
@@ -29,12 +29,7 @@ Configuration CreateRootDomain {
             Name = "DNS"
         }
 
-        TimeZone SetTimeZone
-        {
-            IsSingleInstance = 'Yes'
-            TimeZone = $TimeZoneID
-        }
-       WindowsFeature AD-Domain-Services
+        WindowsFeature AD-Domain-Services
         {
             Ensure = "Present"
             Name = "AD-Domain-Services"
