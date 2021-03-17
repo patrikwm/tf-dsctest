@@ -6,10 +6,15 @@ Configuration CreateRootDomain {
         [Parameter(Mandatory)]
         [Array]$RDSParameters
     )
+    
     $DomainName = $RDSParameters[0].DomainName
     $TimeZoneID = $RDSParameters[0].TimeZoneID
     $DNSServer  = $RDSParameters[0].DNSServer
-    
+    $ExternalDnsDomain = $RDSParameters[0].ExternalDnsDomain
+    $IntBrokerLBIP = $RDSParameters[0].IntBrokerLBIP
+    $IntWebGWLBIP = $RDSParameters[0].IntWebGWLBIP
+    $WebGWDNS = $RDSParameters[0].WebGWDNS
+
     Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
     $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
@@ -86,5 +91,112 @@ Configuration CreateRootDomain {
             AddressFamily  = 'IPv4'
             DependsOn = "[WindowsFeature]DNS"
         }
+
+        If ($MyIP -eq $DNSServer) {
+            xADDomain RootDomain
+            {
+                DomainName = $DomainName
+                DomainAdministratorCredential = $DomainCreds
+                SafemodeAdministratorPassword = $DomainCreds
+                DatabasePath = "$Env:windir\NTDS"
+                LogPath = "$Env:windir\NTDS"
+                SysvolPath = "$Env:windir\SYSVOL"
+                DependsOn = @("[WindowsFeature]AD-Domain-Services", "[xDnsServerAddress]DnsServerAddress")
+            }
+
+            xDnsServerForwarder SetForwarders
+            {
+                IsSingleInstance = 'Yes'
+                IPAddresses      = @('8.8.8.8', '8.8.4.4')
+                UseRootHint      = $false
+                DependsOn = @("[WindowsFeature]DNS", "[xADDomain]RootDomain")
+            }
+    
+            Script AddExternalZone
+            {
+                SetScript = {
+                    Add-DnsServerPrimaryZone -Name $Using:ExternalDnsDomain `
+                        -ReplicationScope "Forest" `
+                        -DynamicUpdate "Secure"
+                }
+    
+                TestScript = {
+                    If (Get-DnsServerZone -Name $Using:ExternalDnsDomain -ErrorAction SilentlyContinue) {
+                        Return $True
+                    } Else {
+                        Return $False
+                    }
+                }
+    
+                GetScript = {
+                    @{
+                        Result = Get-DnsServerZone -Name $Using:ExternalDnsDomain -ErrorAction SilentlyContinue
+                    }
+                }
+    
+                DependsOn = "[xDnsServerForwarder]SetForwarders"
+            }
+    
+            xDnsRecord AddIntLBBrokerIP
+            {
+                Name = "broker"
+                Target = $IntBrokerLBIP
+                Zone = $ExternalDnsDomain
+                Type = "ARecord"
+                Ensure = "Present"
+                DependsOn = "[Script]AddExternalZone"
+            }
+    
+            xDnsRecord AddIntLBWebGWIP
+            {
+                Name = $WebGWDNS
+                Target = $IntWebGWLBIP
+                Zone = $ExternalDnsDomain
+                Type = "ARecord"
+                Ensure = "Present"
+                DependsOn = "[Script]AddExternalZone"
+            }
+
+            PendingReboot RebootAfterInstallingAD
+            {
+                Name = 'RebootAfterInstallingAD'
+                DependsOn = @("[xADDomain]RootDomain","[xDnsServerForwarder]SetForwarders")
+            }                       
+        } Else {            
+            xWaitForADDomain DscForestWait
+            {
+                DomainName = $DomainName
+                DomainUserCredential= $DomainCreds
+                RetryCount = 30
+                RetryIntervalSec = 2400
+                DependsOn = @("[WindowsFeature]AD-Domain-Services", "[xDnsServerAddress]DnsServerAddress")
+            }
+            
+            xADDomainController NextDC
+            {
+                DomainName = $DomainName
+                DomainAdministratorCredential = $DomainCreds
+                SafemodeAdministratorPassword = $DomainCreds
+                DatabasePath = "$Env:windir\NTDS"
+                LogPath = "$Env:windir\NTDS"
+                SysvolPath = "$Env:windir\SYSVOL"
+                DependsOn = @("[xWaitForADDomain]DscForestWait","[WindowsFeature]AD-Domain-Services", "[xDnsServerAddress]DnsServerAddress")
+            }
+
+            xDnsServerForwarder SetForwarders
+            {
+                IsSingleInstance = 'Yes'
+                IPAddresses      = @('8.8.8.8', '8.8.4.4')
+                UseRootHint      = $false
+                DependsOn = @("[WindowsFeature]DNS", "[xADDomainController]NextDC")
+            }            
+
+            PendingReboot RebootAfterInstallingAD
+            {
+                Name = 'RebootAfterInstallingAD'
+                DependsOn = @("[xADDomainController]NextDC","[xDnsServerForwarder]SetForwarders")
+            }            
+        }        
     }
 }
+
