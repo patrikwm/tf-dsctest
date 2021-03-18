@@ -219,13 +219,19 @@ Configuration CreateRootDomain {
             IncludeAllSubFeature = $True
             DependsOn = "[PendingReboot]RebootAfterInstallingAD"
         }
+        ADKDSKey 'ExampleKDSRootKeyInPast'
+        {
+            Ensure                   = 'Present'
+            EffectiveTime            = '1/1/2021 13:00'
+            AllowUnsafeEffectiveTime = $true # Use with caution
+        }
         ADManagedServiceAccount 'AddingMembersUsingSamAccountName'
         {
             Ensure                    = 'Present'
             ServiceAccountName        = 'adfs_gmsa'
             AccountType               = 'Group'
             ManagedPasswordPrincipals = 'Domain Controllers'
-            DependsOn = "[WindowsFeature]adfs-federation"
+            DependsOn = "[ADKDSKey]ExampleKDSRootKeyInPast"
         }
 
         Script installAZCopy
