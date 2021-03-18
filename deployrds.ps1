@@ -18,7 +18,7 @@ Configuration CreateRootDomain {
     $CertificateURL = $RDSParameters[0].CertificateURL
     $SASTOKEN = $RDSParameters[0].SASTOKEN
 
-    Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc
+    Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
     $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
     $MyIP = ($Interface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
@@ -219,30 +219,15 @@ Configuration CreateRootDomain {
             IncludeAllSubFeature = $True
             DependsOn = "[PendingReboot]RebootAfterInstallingAD"
         }
-        Script ConfigureADFS-gmsa
+        ADManagedServiceAccount 'AddingMembersUsingSamAccountName'
         {
-            SetScript = {
-                (Get-Service NTDS).WaitForStatus('Running','00:05:00')
-                (Get-Service ADWS).WaitForStatus('Running','00:05:00')
-                Add-KdsRootKey -EffectiveTime (Get-Date).AddHours(-10)
-                New-ADServiceAccount -Name 'adfs_gmsa' -DNSHostName "sts.${ExternalDnsDomain}" -PrincipalsAllowedToRetrieveManagedPassword 'Domain Controllers'
-            }
-
-            TestScript = {
-                If (Get-ADServiceAccount -Identity 'adfs_gmsa' -ErrorAction SilentlyContinue) {
-                    Return $True
-                } Else {
-                    Return $False
-                }
-            }
-
-            GetScript = {
-                @{
-                    Result = Get-ADServiceAccount -Identity 'adfs_gmsa' -ErrorAction SilentlyContinue
-                }
-            }
+            Ensure                    = 'Present'
+            ServiceAccountName        = 'adfs_gmsa'
+            AccountType               = 'Group'
+            ManagedPasswordPrincipals = 'Domain Controllers'
             DependsOn = "[WindowsFeature]adfs-federation"
         }
+
         Script installAZCopy
         {
             SetScript = {
