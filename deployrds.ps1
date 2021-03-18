@@ -222,6 +222,8 @@ Configuration CreateRootDomain {
         Script ConfigureADFS-gmsa
         {
             SetScript = {
+                (Get-Service NTDS).WaitForStatus('Running','00:05:00')
+                (Get-Service ADWS).WaitForStatus('Running','00:05:00')
                 Add-KdsRootKey -EffectiveTime (Get-Date).AddHours(-10)
                 New-ADServiceAccount -Name 'adfs_gmsa' -DNSHostName "sts.${ExternalDnsDomain}" -PrincipalsAllowedToRetrieveManagedPassword 'Domain Controllers'
             }
