@@ -255,7 +255,7 @@ Configuration CreateRootDomain {
         CertificateImport importCertificate
         {
             Thumbprint   = '7EDD867593ECBE48FAED358CBA993C8A54267904'
-            Location     = 'LocalMachine\My\'
+            Location     = 'LocalMachine'
             Store        = 'Root'
             Path         = 'c:\downloads\certificate.pfx'
             FriendlyName = 'ADFS Certificate'
