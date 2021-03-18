@@ -264,7 +264,7 @@ Configuration CreateRootDomain {
             FederationServiceDisplayName  = "$domain dev ADFS Service"
             CertificateThumbprint         = "$thumbprint"
             GroupServiceAccountIdentifier = "$domain\adfs_gmsa"
-            Credential                    = $DomainAdminCredential
+            Credential                    = $DomainCreds
         }
 
         PendingReboot RebootAfterADFSconfigure
