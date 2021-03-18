@@ -263,7 +263,7 @@ Configuration CreateRootDomain {
             FederationServiceName         = "sts.$ExternalDnsDomain"
             FederationServiceDisplayName  = "$domain dev ADFS Service"
             CertificateThumbprint         = "$thumbprint"
-            GroupServiceAccountIdentifier = "$domain\adfs_gmsa"
+            GroupServiceAccountIdentifier = "$domain\adfs_gmsa$"
             Credential                    = $DomainCreds
         }
 
@@ -274,8 +274,36 @@ Configuration CreateRootDomain {
         }
         AdfsRelyingPartyTrust RelyingPartyHomepage
         {
-            Name        = 'www.mideye.com'
-            MetadataURL = 'https://www.mideye.com/?option=mosaml_metadata'
+            Name                    = 'www.mideye.com'
+            Enabled                 = $true
+            MetadataURL             = 'https://www.mideye.com/?option=mosaml_metadata'
+            Notes                   = 'This is a trust for https://www.mideye.com dev'
+            AccessControlPolicyName = 'Permit Everyone'
+            IssuanceTransformRules  = @(
+                MSFT_AdfsIssuanceTransformRule
+                {
+                    TemplateName   = 'LdapClaims'
+                    Name           = 'WebApp1 Ldap Claims'
+                    AttributeStore = 'Active Directory'
+                    LdapMapping    = @(
+                        MSFT_AdfsLdapMapping
+                        {
+                            LdapAttribute     = 'objectSID'
+                            OutgoingClaimType = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/primarysid'
+                        }
+                        MSFT_AdfsLdapMapping
+                        {
+                            LdapAttribute     = 'userPrincipalName'
+                            OutgoingClaimType = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'
+                        }
+                        MSFT_AdfsLdapMapping
+                        {
+                            LdapAttribute     = 'mail'
+                            OutgoingClaimType = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
+                        }
+                    )
+                }
+            )
             DependsOn = "[PendingReboot]RebootAfterADFSconfigure"
         }
     }
