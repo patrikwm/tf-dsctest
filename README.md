@@ -19,8 +19,9 @@ powershell.exe -NoLogo -NoProfile -Command '[Net.ServicePointManager]::SecurityP
  - xComputerManagement
  - xDnsServer
  - NetworkingDsc
- - ActiveDirectoryDsc
- - CertificateDsc
+ - ActiveDirectoryDsc # Create GMSA account
+ - CertificateDsc   # Import certificate
+ - xPSDesiredStateConfiguration # For downloading Files 
 
 Publish create a DCS zip file
 ```Publish-AzVMDscConfiguration .\deployrds.ps1 -OutputArchivePath '.\deployrds.zip'```

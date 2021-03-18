@@ -18,7 +18,7 @@ Configuration CreateRootDomain {
     $CertificateURL = $RDSParameters[0].CertificateURL
     $SASTOKEN = $RDSParameters[0].SASTOKEN
 
-    Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc,CertificateDsc
+    Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc,CertificateDsc,xPSDesiredStateConfiguration
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
     $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
     $MyIP = ($Interface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
@@ -219,47 +219,39 @@ Configuration CreateRootDomain {
             IncludeAllSubFeature = $True
             DependsOn = "[PendingReboot]RebootAfterInstallingAD"
         }
-        ADKDSKey 'ExampleKDSRootKeyInPast'
+        ADKDSKey CreateKDSRootKeyInPast
         {
             Ensure                   = 'Present'
             EffectiveTime            = '1/1/2021 13:00'
             AllowUnsafeEffectiveTime = $true # Use with caution
         }
-        ADManagedServiceAccount 'AddingMembersUsingSamAccountName'
+        ADManagedServiceAccount AddADFSGMSA
         {
             Ensure                    = 'Present'
             ServiceAccountName        = 'adfs_gmsa'
             AccountType               = 'Group'
             ManagedPasswordPrincipals = 'Domain Controllers'
-            DependsOn = "[ADKDSKey]ExampleKDSRootKeyInPast"
+            DependsOn = "[ADKDSKey]CreateKDSRootKeyInPast"
         }
 
-        Script GetCertificate
+        xRemoteFile DownloadCertificate
         {
-            SetScript = {
-                New-Item -Path "c:\" -Name "downloads" -ItemType "directory"
-                Start-BitsTransfer -Source "https://aka.ms/downloadazcopy-v10-windows" -Destination c:\downloads\azcopy.zip
-                Expand-Archive c:\downloads\azcopy.zip c:\downloads\ -Force
-                Get-ChildItem "c:\downloads\*\*.exe" | Move-Item -Destination "C:\Windows\System32\" -Force
-                C:\Windows\System32\azcopy.exe copy "$CertificateURL$SASTOKEN" "c:\certificate.pfx"
+            DestinationPath = "$env:SystemDrive\certificate.pfx"
+            Uri             = "${CertificateURL}${SASTOKEN}"
+            UserAgent       = [Microsoft.PowerShell.Commands.PSUserAgent]::InternetExplorer
+            Headers = @{
+                'Accept-Language' = 'en-US'
             }
-            TestScript = {If (get-command azcopy.exe -ErrorAction SilentlyContinue) {
-                    Return $True
-                } Else {
-                    Return $False}
-                }
-
-            GetScript = { @{ Result = get-command azcopy.exe -ErrorAction SilentlyContinue } }
-            DependsOn = "[WindowsFeature]adfs-federation"
         }
+        
         CertificateImport importCertificate
         {
             Thumbprint   = '7EDD867593ECBE48FAED358CBA993C8A54267904'
             Location     = 'LocalMachine'
             Store        = 'Root'
-            Path         = 'c:\downloads\certificate.pfx'
+            Path         = "$env:SystemDrive\certificate.pfx"
             FriendlyName = 'ADFS Certificate'
-            DependsOn    = "[Script]GetCertificate"
+            DependsOn    = "[xRemoteFile]DownloadCertificate"
         }
     }
 }
