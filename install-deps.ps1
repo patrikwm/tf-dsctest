@@ -8,7 +8,8 @@ $modules = "PackageManagement",
            "xComputerManagement",
            "xDnsServer",
            "NetworkingDsc",
-           "ActiveDirectoryDsc"
+           "ActiveDirectoryDsc",
+           "CertificateDsc"
 
 
 foreach ($item in $modules) {

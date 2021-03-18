@@ -18,7 +18,7 @@ Configuration CreateRootDomain {
     $CertificateURL = $RDSParameters[0].CertificateURL
     $SASTOKEN = $RDSParameters[0].SASTOKEN
 
-    Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc
+    Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc,CertificateDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
     $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
     $MyIP = ($Interface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
@@ -234,56 +234,32 @@ Configuration CreateRootDomain {
             DependsOn = "[ADKDSKey]ExampleKDSRootKeyInPast"
         }
 
-        Script installAZCopy
+        Script GetCertificate
         {
             SetScript = {
-                (Get-Service NTDS).WaitForStatus('Running','00:05:00')
-                (Get-Service ADWS).WaitForStatus('Running','00:05:00')
                 New-Item -Path "c:\" -Name "downloads" -ItemType "directory"
                 Start-BitsTransfer -Source "https://aka.ms/downloadazcopy-v10-windows" -Destination c:\downloads\azcopy.zip
                 Expand-Archive c:\downloads\azcopy.zip c:\downloads\ -Force
                 Get-ChildItem "c:\downloads\*\*.exe" | Move-Item -Destination "C:\Windows\System32\" -Force
-
+                C:\Windows\System32\azcopy.exe copy "$CertificateURL$SASTOKEN" "c:\certificate.pfx"
             }
-
-            TestScript = {
-                If (get-command azcopy.exe -ErrorAction SilentlyContinue) {
+            TestScript = {If (get-command azcopy.exe -ErrorAction SilentlyContinue) {
                     Return $True
                 } Else {
-                    Return $False
+                    Return $False}
                 }
-            }
 
-            GetScript = {
-                @{
-                    Result = get-command azcopy.exe -ErrorAction SilentlyContinue
-                }
-            }
+            GetScript = { @{ Result = get-command azcopy.exe -ErrorAction SilentlyContinue } }
             DependsOn = "[WindowsFeature]adfs-federation"
         }
-        Script installCertificate
+        CertificateImport importCertificate
         {
-            SetScript = {
-                (Get-Service NTDS).WaitForStatus('Running','00:05:00')
-                (Get-Service ADWS).WaitForStatus('Running','00:05:00')
-                azcopy.exe copy "$CertificateURL$SASTOKEN" "c:\downloads\certificate.pfx"
-                Import-PfxCertificate -FilePath "c:\downloads\certificate.pfx" -CertStoreLocation  Cert:\LocalMachine\My\
-            }
-
-            TestScript = {
-                If (Get-ChildItem  -Path Cert:\LocalMachine\MY | Where-Object {$_.Subject -Like "*$ExternalDnsDomain*"} -ErrorAction SilentlyContinue) {
-                    Return $True
-                } Else {
-                    Return $False
-                }
-            }
-
-            GetScript = {
-                @{
-                    Result = Get-ChildItem  -Path Cert:\LocalMachine\MY | Where-Object {$_.Subject -Like "*$ExternalDnsDomain*"} -ErrorAction SilentlyContinue
-                }
-            }
-            DependsOn = "[Script]installAZCopy"
+            Thumbprint   = '7EDD867593ECBE48FAED358CBA993C8A54267904'
+            Location     = 'LocalMachine\My\'
+            Store        = 'Root'
+            Path         = 'c:\downloads\certificate.pfx'
+            FriendlyName = 'ADFS Certificate'
+            DependsOn    = "[Script]GetCertificate"
         }
     }
 }
