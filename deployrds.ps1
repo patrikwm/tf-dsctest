@@ -17,8 +17,12 @@ Configuration CreateRootDomain {
     $IntADFSIP = $RDSParameters[0].IntADFSIP
     $CertificateURL = $RDSParameters[0].CertificateURL
     $SASTOKEN = $RDSParameters[0].SASTOKEN
+    $domain = $RDSParameters[0].domain
+    $thumbprint = $RDSParameters[0].thumbprint
 
-    Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC,xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc,CertificateDsc,xPSDesiredStateConfiguration
+    Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC
+    Import-DscResource -ModuleName xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc,CertificateDsc
+    Import-DscResource -ModuleName xPSDesiredStateConfiguration,AdfsDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
     $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
     $MyIP = ($Interface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
@@ -246,12 +250,33 @@ Configuration CreateRootDomain {
         
         CertificateImport importCertificate
         {
-            Thumbprint   = '7EDD867593ECBE48FAED358CBA993C8A54267904'
+            Thumbprint   = "$thumbprint"
             Location     = 'LocalMachine'
-            Store        = 'Root'
+            Store        = 'my'
             Path         = "$env:SystemDrive\certificate.pfx"
             FriendlyName = 'ADFS Certificate'
             DependsOn    = "[xRemoteFile]DownloadCertificate"
+        }
+
+        AdfsFarm ConfigureADFS
+        {
+            FederationServiceName         = "sts.$ExternalDnsDomain"
+            FederationServiceDisplayName  = "$domain dev ADFS Service"
+            CertificateThumbprint         = "$thumbprint"
+            GroupServiceAccountIdentifier = "$domain\adfs_gmsa"
+            Credential                    = $DomainAdminCredential
+        }
+
+        PendingReboot RebootAfterADFSconfigure
+        {
+            Name = 'RebootAfterInstallingAD'
+            DependsOn = "[AdfsFarm]ConfigureADFS"
+        }
+        AdfsRelyingPartyTrust RelyingPartyHomepage
+        {
+            Name        = 'www.mideye.com'
+            MetadataURL = 'https://www.mideye.com/?option=mosaml_metadata'
+            DependsOn = "[PendingReboot]RebootAfterADFSconfigure"
         }
     }
 }
