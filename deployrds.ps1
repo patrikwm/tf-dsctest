@@ -24,6 +24,7 @@ Configuration CreateRootDomain {
     Import-DscResource -ModuleName xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc,CertificateDsc
     Import-DscResource -ModuleName xPSDesiredStateConfiguration,AdfsDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
+    [System.Management.Automation.PSCredential]$mycreds = New-Object System.Management.Automation.PSCredential ("username", (new-object System.Security.SecureString))
     $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
     $MyIP = ($Interface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
     $InterfaceAlias = $($Interface.Name)
@@ -254,6 +255,7 @@ Configuration CreateRootDomain {
             Location     = 'LocalMachine'
             Store        = 'My'
             Path         = "$env:SystemDrive\certificate.pfx"
+            Credential   = $mycreds
             DependsOn    = "[xRemoteFile]DownloadCertificate"
         }
 
