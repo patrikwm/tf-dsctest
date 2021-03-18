@@ -28,7 +28,7 @@ Configuration CreateRootDomain {
     Import-DscResource -ModuleName xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc,CertificateDsc
     Import-DscResource -ModuleName xPSDesiredStateConfiguration,AdfsDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
-    [System.Management.Automation.PSCredential]$CertificateCreds = New-Object System.Management.Automation.PSCredential ("$($CertCreds.UserName)",$CertCreds.CertPassword)
+    [System.Management.Automation.PSCredential]$CertificateCreds = New-Object System.Management.Automation.PSCredential ($CertCreds.UserName,$CertCreds.Password)
     $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
     $MyIP = ($Interface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
     $InterfaceAlias = $($Interface.Name)
