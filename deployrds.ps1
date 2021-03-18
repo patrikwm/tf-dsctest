@@ -248,13 +248,12 @@ Configuration CreateRootDomain {
             }
         }
         
-        CertificateImport importCertificate
+        PfxImport importCertificate
         {
             Thumbprint   = "$thumbprint"
             Location     = 'LocalMachine'
-            Store        = 'my'
+            Store        = 'My'
             Path         = "$env:SystemDrive\certificate.pfx"
-            FriendlyName = 'ADFS Certificate'
             DependsOn    = "[xRemoteFile]DownloadCertificate"
         }
 
