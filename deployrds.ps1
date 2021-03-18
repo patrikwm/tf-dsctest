@@ -4,7 +4,10 @@ Configuration CreateRootDomain {
         [System.Management.Automation.PSCredential]$Admincreds,
 
         [Parameter(Mandatory)]
-        [Array]$RDSParameters
+        [Array]$RDSParameters,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$CertCreds
     )
 
     $DomainName = $RDSParameters[0].DomainName
@@ -20,11 +23,12 @@ Configuration CreateRootDomain {
     $domain = $RDSParameters[0].domain
     $thumbprint = $RDSParameters[0].thumbprint
 
+
     Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC
     Import-DscResource -ModuleName xComputerManagement,xDnsServer,NetworkingDsc,ActiveDirectoryDsc,CertificateDsc
     Import-DscResource -ModuleName xPSDesiredStateConfiguration,AdfsDsc
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
-    [System.Management.Automation.PSCredential]$mycreds = New-Object System.Management.Automation.PSCredential ("username", (new-object System.Security.SecureString))
+    [System.Management.Automation.PSCredential]$CertificateCreds = New-Object System.Management.Automation.PSCredential ("$($CertCreds.UserName)",$CertCreds.CertCreds)
     $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
     $MyIP = ($Interface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
     $InterfaceAlias = $($Interface.Name)
@@ -255,7 +259,7 @@ Configuration CreateRootDomain {
             Location     = 'LocalMachine'
             Store        = 'My'
             Path         = "$env:SystemDrive\certificate.pfx"
-            Credential   = $mycreds
+            Credential   = $CertificateCreds
             DependsOn    = "[xRemoteFile]DownloadCertificate"
         }
 
