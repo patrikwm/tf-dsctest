@@ -330,6 +330,13 @@ Configuration WebApplicationProxy
     $DomainName = $RDSParameters[0].DomainName
     $DNSServer = $RDSParameters[0].DNSServer
     $TimeZoneID = $RDSParameters[0].TimeZoneID
+    $DomainName = $RDSParameters[0].DomainName
+    $TimeZoneID = $RDSParameters[0].TimeZoneID
+    $DNSServer  = $RDSParameters[0].DNSServer
+    $ExternalDnsDomain = $RDSParameters[0].ExternalDnsDomain
+    $CertificateURL = $RDSParameters[0].CertificateURL
+    $SASTOKEN = $RDSParameters[0].SASTOKEN
+    $thumbprint = $RDSParameters[0].thumbprint
     
     Import-DscResource -ModuleName PSDesiredStateConfiguration,xNetworking,ActiveDirectoryDsc,ComputerManagementDSC
     import-DscResource -ModuleName xComputerManagement,NetworkingDsc,cWAP,CertificateDsc,xPSDesiredStateConfiguration
@@ -428,6 +435,7 @@ Configuration WebApplicationProxy
             FederationServiceName = "sts.$ExternalDnsDomain"
             Credential = $DomainCreds
             CertificateThumbprint = $thumbprint
+            DependsOn = "[PendingReboot]RebootAfterDomainJoin"
         }
 
         PendingReboot RebootAfterConfigureWAP
