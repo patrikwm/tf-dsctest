@@ -271,6 +271,19 @@ Configuration CreateRootDomain {
             GroupServiceAccountIdentifier = "$domain\adfs_gmsa$"
             Credential                    = $DomainCreds
         }
+        AdfsCertificate TokenSigningCertificates
+        {
+            CertificateType = 'Token-Signing'
+            Thumbprint      = "$thumbprint"
+            DependsOn = "[AdfsFarm]ConfigureADFS"
+        }
+
+        AdfsCertificate TokenDecryptingCertificates
+        {
+            CertificateType = 'Token-Decrypting'
+            Thumbprint      = "$thumbprint"
+            DependsOn = "[AdfsFarm]ConfigureADFS"
+        }
 
         PendingReboot RebootAfterADFSconfigure
         {
