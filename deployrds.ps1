@@ -311,6 +311,12 @@ Configuration CreateRootDomain {
             )
             DependsOn = "[PendingReboot]RebootAfterADFSconfigure"
         }
+        AdfsProperties ADFSFarmProperties
+        {
+            FederationServiceName    = "sts.$ExternalDnsDomain"
+            EnableIdPInitiatedSignonPage = $True
+            DependsOn = "[AdfsRelyingPartyTrust]RelyingPartyHomepage"
+        }
     }
 }
 
