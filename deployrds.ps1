@@ -359,11 +359,16 @@ Configuration WebApplicationProxy
             Name = "RSAT-AD-PowerShell"
         }
 
+        WindowsFeature RSAT-RemoteAccess
+        {
+            Ensure = "Present"
+            Name = "RSAT-RemoteAccess"
+        }
+
         WindowsFeature Web-Application-Proxy
         {
             Ensure = "Present"
             Name = "Web-Application-Proxy"
-            IncludeAllSubFeature = $True
         }        
 
         xRemoteFile DownloadCertificate
