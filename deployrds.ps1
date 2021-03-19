@@ -314,3 +314,126 @@ Configuration CreateRootDomain {
     }
 }
 
+Configuration WebApplicationProxy
+{
+    Param(
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$Admincreds,
+
+        [Parameter(Mandatory)]
+        [Array]$RDSParameters,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$CertCreds
+    )
+
+    $DomainName = $RDSParameters[0].DomainName
+    $DNSServer = $RDSParameters[0].DNSServer
+    $TimeZoneID = $RDSParameters[0].TimeZoneID
+    
+    Import-DscResource -ModuleName PSDesiredStateConfiguration,xNetworking,ActiveDirectoryDsc,ComputerManagementDSC
+    import-DscResource -ModuleName xComputerManagement,NetworkingDsc,cWAP,CertificateDsc,xPSDesiredStateConfiguration
+    [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
+    [System.Management.Automation.PSCredential]$CertificateCreds = New-Object System.Management.Automation.PSCredential ($CertCreds.UserName,$CertCreds.Password)
+    $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
+    $InterfaceAlias = $($Interface.Name)
+
+    Node localhost
+    {
+        LocalConfigurationManager
+        {
+            RebootNodeIfNeeded = $true
+            ConfigurationMode = "ApplyOnly"
+        }
+
+        WindowsFeature RSAT-AD-PowerShell
+        {
+            Ensure = "Present"
+            Name = "RSAT-AD-PowerShell"
+        }
+
+        WindowsFeature Web-Application-Proxy
+        {
+            Ensure = "Present"
+            Name = "Web-Application-Proxy"
+            IncludeAllSubFeature = $True
+        }        
+
+        xRemoteFile DownloadCertificate
+        {
+            DestinationPath = "$env:SystemDrive\certificate.pfx"
+            Uri             = "${CertificateURL}${SASTOKEN}"
+            UserAgent       = [Microsoft.PowerShell.Commands.PSUserAgent]::InternetExplorer
+            Headers = @{
+                'Accept-Language' = 'en-US'
+            }
+        }
+        
+        PfxImport importCertificate
+        {
+            Thumbprint   = "$thumbprint"
+            Location     = 'LocalMachine'
+            Store        = 'My'
+            Path         = "$env:SystemDrive\certificate.pfx"
+            Credential   = $CertificateCreds
+            DependsOn    = "[xRemoteFile]DownloadCertificate"
+        }
+
+        TimeZone SetTimeZone
+        {
+            IsSingleInstance = 'Yes'
+            TimeZone = $TimeZoneID
+        }
+
+        Firewall EnableSMBFwRule
+        {
+            Name = "FPS-SMB-In-TCP"
+            Enabled = $True
+            Ensure = "Present"
+        }        
+
+        xDnsServerAddress DnsServerAddress
+        {
+            Address        = $DNSServer
+            InterfaceAlias = $InterfaceAlias
+            AddressFamily  = 'IPv4'
+        }
+
+        WaitForADDomain WaitADDomain
+        {
+            DomainName = $DomainName
+            Credential = $DomainCreds
+            WaitTimeout = 2400
+            RestartCount = 30
+            WaitForValidCredentials = $True
+            DependsOn = @("[xDnsServerAddress]DnsServerAddress","[WindowsFeature]RSAT-AD-PowerShell")
+        }
+
+        xComputer DomainJoin
+        {
+            Name = $env:COMPUTERNAME
+            DomainName = $DomainName
+            Credential = $DomainCreds
+            DependsOn = "[WaitForADDomain]WaitADDomain" 
+        }
+
+        PendingReboot RebootAfterDomainJoin
+        {
+            Name = 'RebootAfterDomainJoin'
+            DependsOn = "[xComputer]DomainJoin"
+        }
+
+        cWAPConfiguration ConfigureWAP
+        {
+            FederationServiceName = "sts.$ExternalDnsDomain"
+            Credential = $DomainCreds
+            CertificateThumbprint = $thumbprint
+        }
+
+        PendingReboot RebootAfterConfigureWAP
+        {
+            Name = 'RebootAfterConfigureWAP'
+            DependsOn = "[cWAPConfiguration]ConfigureWAP"
+        }
+    }    
+}
