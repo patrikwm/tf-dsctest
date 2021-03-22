@@ -271,25 +271,35 @@ Configuration CreateRootDomain {
             GroupServiceAccountIdentifier = "$domain\adfs_gmsa$"
             Credential                    = $DomainCreds
         }
+        
+        AdfsProperties ADFSFarmProperties
+        {
+            FederationServiceName    = "sts.$ExternalDnsDomain"
+            EnableIdPInitiatedSignonPage = $True
+            AutoCertificateRollover = $False
+            DependsOn = "[AdfsFarm]ConfigureADFS"
+        }
+
         AdfsCertificate TokenSigningCertificates
         {
             CertificateType = 'Token-Signing'
             Thumbprint      = "$thumbprint"
-            DependsOn = "[AdfsFarm]ConfigureADFS"
+            DependsOn = "[AdfsProperties]ADFSFarmProperties"
         }
 
         AdfsCertificate TokenDecryptingCertificates
         {
             CertificateType = 'Token-Decrypting'
             Thumbprint      = "$thumbprint"
-            DependsOn = "[AdfsFarm]ConfigureADFS"
+            DependsOn = "[AdfsProperties]ADFSFarmProperties"
         }
 
         PendingReboot RebootAfterADFSconfigure
         {
             Name = 'RebootAfterInstallingAD'
-            DependsOn = "[AdfsFarm]ConfigureADFS"
+            DependsOn = @("[AdfsCertificate]TokenSigningCertificates","[AdfsCertificate]TokenDecryptingCertificates")
         }
+        
         AdfsRelyingPartyTrust RelyingPartyHomepage
         {
             Name                    = 'www.mideye.com'
@@ -323,12 +333,6 @@ Configuration CreateRootDomain {
                 }
             )
             DependsOn = "[PendingReboot]RebootAfterADFSconfigure"
-        }
-        AdfsProperties ADFSFarmProperties
-        {
-            FederationServiceName    = "sts.$ExternalDnsDomain"
-            EnableIdPInitiatedSignonPage = $True
-            DependsOn = "[AdfsRelyingPartyTrust]RelyingPartyHomepage"
         }
     }
 }
