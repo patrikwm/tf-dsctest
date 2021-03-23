@@ -280,19 +280,19 @@ Configuration CreateRootDomain {
             DependsOn = "[AdfsFarm]ConfigureADFS"
         }
 
-        AdfsCertificate TokenSigningCertificates
-        {
-            CertificateType = 'Token-Signing'
-            Thumbprint      = "$thumbprint"
-            DependsOn = "[AdfsProperties]ADFSFarmProperties"
-        }
-
-        AdfsCertificate TokenDecryptingCertificates
-        {
-            CertificateType = 'Token-Decrypting'
-            Thumbprint      = "$thumbprint"
-            DependsOn = "[AdfsProperties]ADFSFarmProperties"
-        }
+        # AdfsCertificate TokenSigningCertificates
+        # {
+        #     CertificateType = 'Token-Signing'
+        #     Thumbprint      = "$thumbprint"
+        #     DependsOn = "[AdfsProperties]ADFSFarmProperties"
+        # }
+# 
+        # AdfsCertificate TokenDecryptingCertificates
+        # {
+        #     CertificateType = 'Token-Decrypting'
+        #     Thumbprint      = "$thumbprint"
+        #     DependsOn = "[AdfsProperties]ADFSFarmProperties"
+        # }
 
         PendingReboot RebootAfterADFSconfigure
         {
