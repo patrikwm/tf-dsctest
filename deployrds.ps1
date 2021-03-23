@@ -297,7 +297,8 @@ Configuration CreateRootDomain {
         PendingReboot RebootAfterADFSconfigure
         {
             Name = 'RebootAfterInstallingAD'
-            DependsOn = @("[AdfsCertificate]TokenSigningCertificates","[AdfsCertificate]TokenDecryptingCertificates")
+            #DependsOn = @("[AdfsCertificate]TokenSigningCertificates","[AdfsCertificate]TokenDecryptingCertificates")
+            DependsOn = "[AdfsProperties]ADFSFarmProperties"
         }
         
         AdfsRelyingPartyTrust RelyingPartyHomepage
