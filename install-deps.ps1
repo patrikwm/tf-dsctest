@@ -1,7 +1,7 @@
 
 $modules = "PackageManagement",
            "xActiveDirectory",
-           "PSDesiredStateConfiguration",
+           #"PSDesiredStateConfiguration",
            "xActiveDirectory",
            "xNetworking",
            "ComputerManagementDSC",
@@ -10,7 +10,8 @@ $modules = "PackageManagement",
            "NetworkingDsc",
            "ActiveDirectoryDsc",
            "CertificateDsc",
-           "AdfsDsc"
+           "AdfsDsc",
+           "cWAP"
 
 
 foreach ($item in $modules) {

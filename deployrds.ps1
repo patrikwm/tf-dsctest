@@ -464,7 +464,7 @@ Configuration WebApplicationProxy
             FederationServiceName = "sts.$ExternalDnsDomain"
             Credential = $DomainCreds
             CertificateThumbprint = $thumbprint
-            DependsOn = "[PendingReboot]RebootAfterDomainJoin"
+            DependsOn = @("[PendingReboot]RebootAfterDomainJoin","[PfxImport]importCertificate")
         }
 
         PendingReboot RebootAfterConfigureWAP
