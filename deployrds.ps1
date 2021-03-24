@@ -464,7 +464,6 @@ Configuration WebApplicationProxy {
             FederationServiceName = "sts.$ExternalDnsDomain"
             Credential = $DomainCreds
             CertificateThumbprint = $thumbprint
-            ForwardProxy = $null
             DependsOn = @("[PendingReboot]RebootAfterDomainJoin","[PfxImport]importCertificate")
         }
 
