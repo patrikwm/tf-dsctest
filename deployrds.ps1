@@ -40,7 +40,7 @@ Configuration CreateRootDomain {
             RebootNodeIfNeeded = $true
             ConfigurationMode = "ApplyOnly"
         }
-                
+
         WindowsFeature DNS
         {
             Ensure = "Present"
@@ -52,14 +52,14 @@ Configuration CreateRootDomain {
             Ensure = "Present"
             Name = "AD-Domain-Services"
             DependsOn = "[WindowsFeature]DNS"
-        }      
+        }
 
         WindowsFeature DnsTools
         {
             Ensure = "Present"
             Name = "RSAT-DNS-Server"
             DependsOn = "[WindowsFeature]DNS"
-        }        
+        }
 
         WindowsFeature GPOTools
         {
@@ -73,7 +73,7 @@ Configuration CreateRootDomain {
             Ensure = "Present"
             Name = "RSAT-DFS-Mgmt-Con"
             DependsOn = "[WindowsFeature]DNS"
-        }        
+        }
 
         WindowsFeature RSAT-AD-Tools
         {
@@ -95,7 +95,7 @@ Configuration CreateRootDomain {
             Enabled = $True
             Ensure = "Present"
         }
-        
+
         xDnsServerAddress DnsServerAddress
         {
             Address        = $DNSServer
@@ -123,7 +123,7 @@ Configuration CreateRootDomain {
                 UseRootHint      = $false
                 DependsOn = @("[WindowsFeature]DNS", "[xADDomain]RootDomain")
             }
-    
+
             Script AddExternalZone
             {
                 SetScript = {
@@ -131,7 +131,7 @@ Configuration CreateRootDomain {
                         -ReplicationScope "Forest" `
                         -DynamicUpdate "Secure"
                 }
-    
+
                 TestScript = {
                     If (Get-DnsServerZone -Name $Using:ExternalDnsDomain -ErrorAction SilentlyContinue) {
                         Return $True
@@ -139,16 +139,16 @@ Configuration CreateRootDomain {
                         Return $False
                     }
                 }
-    
+
                 GetScript = {
                     @{
                         Result = Get-DnsServerZone -Name $Using:ExternalDnsDomain -ErrorAction SilentlyContinue
                     }
                 }
-    
+
                 DependsOn = "[xDnsServerForwarder]SetForwarders"
             }
-    
+
             xDnsRecord AddIntLBBrokerIP
             {
                 Name = "broker"
@@ -158,7 +158,7 @@ Configuration CreateRootDomain {
                 Ensure = "Present"
                 DependsOn = "[Script]AddExternalZone"
             }
-    
+
             xDnsRecord AddIntLBWebGWIP
             {
                 Name = $WebGWDNS
@@ -184,8 +184,8 @@ Configuration CreateRootDomain {
             {
                 Name = 'RebootAfterInstallingAD'
                 DependsOn = @("[xADDomain]RootDomain","[xDnsServerForwarder]SetForwarders")
-            }                       
-        } Else {            
+            }
+        } Else {
             xWaitForADDomain DscForestWait
             {
                 DomainName = $DomainName
@@ -194,7 +194,7 @@ Configuration CreateRootDomain {
                 RetryIntervalSec = 2400
                 DependsOn = @("[WindowsFeature]AD-Domain-Services", "[xDnsServerAddress]DnsServerAddress")
             }
-            
+
             xADDomainController NextDC
             {
                 DomainName = $DomainName
@@ -212,13 +212,13 @@ Configuration CreateRootDomain {
                 IPAddresses      = @('8.8.8.8', '8.8.4.4')
                 UseRootHint      = $false
                 DependsOn = @("[WindowsFeature]DNS", "[xADDomainController]NextDC")
-            }            
+            }
 
             PendingReboot RebootAfterInstallingAD
             {
                 Name = 'RebootAfterInstallingAD'
                 DependsOn = @("[xADDomainController]NextDC","[xDnsServerForwarder]SetForwarders")
-            }            
+            }
         }
 
         WindowsFeature adfs-federation
@@ -252,7 +252,7 @@ Configuration CreateRootDomain {
                 'Accept-Language' = 'en-US'
             }
         }
-        
+
         PfxImport importCertificate
         {
             Thumbprint   = "$thumbprint"
@@ -271,7 +271,7 @@ Configuration CreateRootDomain {
             GroupServiceAccountIdentifier = "$domain\adfs_gmsa$"
             Credential                    = $DomainCreds
         }
-        
+
         AdfsProperties ADFSFarmProperties
         {
             FederationServiceName    = "sts.$ExternalDnsDomain"
@@ -286,7 +286,7 @@ Configuration CreateRootDomain {
         #     Thumbprint      = "$thumbprint"
         #     DependsOn = "[AdfsProperties]ADFSFarmProperties"
         # }
-# 
+#
         # AdfsCertificate TokenDecryptingCertificates
         # {
         #     CertificateType = 'Token-Decrypting'
@@ -300,7 +300,7 @@ Configuration CreateRootDomain {
             #DependsOn = @("[AdfsCertificate]TokenSigningCertificates","[AdfsCertificate]TokenDecryptingCertificates")
             DependsOn = "[AdfsProperties]ADFSFarmProperties"
         }
-        
+
         AdfsRelyingPartyTrust RelyingPartyHomepage
         {
             Name                    = 'www.mideye.com'
@@ -338,8 +338,7 @@ Configuration CreateRootDomain {
     }
 }
 
-Configuration WebApplicationProxy
-{
+Configuration WebApplicationProxy {
     Param(
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$Admincreds,
@@ -361,7 +360,7 @@ Configuration WebApplicationProxy
     $CertificateURL = $RDSParameters[0].CertificateURL
     $SASTOKEN = $RDSParameters[0].SASTOKEN
     $thumbprint = $RDSParameters[0].thumbprint
-    
+
     Import-DscResource -ModuleName PSDesiredStateConfiguration,xNetworking,ActiveDirectoryDsc,ComputerManagementDSC
     import-DscResource -ModuleName xComputerManagement,NetworkingDsc,cWAP,CertificateDsc,xPSDesiredStateConfiguration
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
@@ -393,7 +392,7 @@ Configuration WebApplicationProxy
         {
             Ensure = "Present"
             Name = "Web-Application-Proxy"
-        }        
+        }
 
         xRemoteFile DownloadCertificate
         {
@@ -404,7 +403,7 @@ Configuration WebApplicationProxy
                 'Accept-Language' = 'en-US'
             }
         }
-        
+
         PfxImport importCertificate
         {
             Thumbprint   = "$thumbprint"
@@ -426,7 +425,7 @@ Configuration WebApplicationProxy
             Name = "FPS-SMB-In-TCP"
             Enabled = $True
             Ensure = "Present"
-        }        
+        }
 
         xDnsServerAddress DnsServerAddress
         {
@@ -450,7 +449,7 @@ Configuration WebApplicationProxy
             Name = $env:COMPUTERNAME
             DomainName = $DomainName
             Credential = $DomainCreds
-            DependsOn = "[WaitForADDomain]WaitADDomain" 
+            DependsOn = "[WaitForADDomain]WaitADDomain"
         }
 
         PendingReboot RebootAfterDomainJoin
@@ -461,6 +460,7 @@ Configuration WebApplicationProxy
 
         cWAPConfiguration ConfigureWAP
         {
+            Ensure   = Presents
             FederationServiceName = "sts.$ExternalDnsDomain"
             Credential = $DomainCreds
             CertificateThumbprint = $thumbprint
@@ -472,5 +472,128 @@ Configuration WebApplicationProxy
             Name = 'RebootAfterConfigureWAP'
             DependsOn = "[cWAPConfiguration]ConfigureWAP"
         }
-    }    
+    }
+}
+
+Configuration RDWebGateway {
+    Param(
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$Admincreds,
+
+        [Parameter(Mandatory)]
+        [Array]$RDSParameters,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$CertCreds
+
+    )
+
+    $DomainName = $RDSParameters[0].DomainName
+    $DNSServer = $RDSParameters[0].DNSServer
+    $TimeZoneID = $RDSParameters[0].TimeZoneID
+    $ExternalDnsDomain = $RDSParameters[0].ExternalDnsDomain
+    $CertificateURL = $RDSParameters[0].CertificateURL
+    $SASTOKEN = $RDSParameters[0].SASTOKEN
+    $thumbprint = $RDSParameters[0].thumbprint
+
+    Import-DscResource -ModuleName PSDesiredStateConfiguration,xNetworking,ActiveDirectoryDsc,ComputerManagementDSC,xComputerManagement
+    Import-DscResource -ModuleName xWebAdministration,NetworkingDsc,CertificateDsc,xPSDesiredStateConfiguration
+    [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)",$Admincreds.Password)
+    [System.Management.Automation.PSCredential]$CertificateCreds = New-Object System.Management.Automation.PSCredential ($CertCreds.UserName,$CertCreds.Password)
+    $Interface = Get-NetAdapter | Where-Object Name -Like "Ethernet*" | Select-Object -First 1
+    $InterfaceAlias = $($Interface.Name)
+
+    Node localhost
+    {
+        LocalConfigurationManager
+        {
+            RebootNodeIfNeeded = $true
+            ConfigurationMode = "ApplyOnly"
+        }
+
+        WindowsFeature RDS-Gateway
+        {
+            Ensure = "Present"
+            Name = "RDS-Gateway"
+        }
+
+        WindowsFeature RDS-Web-Access
+        {
+            Ensure = "Present"
+            Name = "RDS-Web-Access"
+        }
+
+        WindowsFeature RSAT-AD-PowerShell
+        {
+            Ensure = "Present"
+            Name = "RSAT-AD-PowerShell"
+        }
+
+        xRemoteFile DownloadCertificate
+        {
+            DestinationPath = "$env:SystemDrive\certificate.pfx"
+            Uri             = "${CertificateURL}${SASTOKEN}"
+            UserAgent       = [Microsoft.PowerShell.Commands.PSUserAgent]::InternetExplorer
+            Headers = @{
+                'Accept-Language' = 'en-US'
+            }
+        }
+
+        PfxImport importCertificate
+        {
+            Thumbprint   = "$thumbprint"
+            Location     = 'LocalMachine'
+            Store        = 'My'
+            Path         = "$env:SystemDrive\certificate.pfx"
+            Credential   = $CertificateCreds
+            DependsOn    = "[xRemoteFile]DownloadCertificate"
+        }
+
+        TimeZone SetTimeZone
+        {
+            IsSingleInstance = 'Yes'
+            TimeZone = $TimeZoneID
+        }
+
+        Firewall EnableSMBFwRule
+        {
+            Name = "FPS-SMB-In-TCP"
+            Enabled = $True
+            Ensure = "Present"
+        }
+
+        xIISMimeTypeMapping ConfigureMIME
+        {
+            Extension = "."
+            MimeType = "text/plain"
+            ConfigurationPath = "IIS:\sites\Default Web Site"
+            Ensure = "Present"
+            DependsOn = "[WindowsFeature]RDS-Web-Access"
+        }
+
+        xDnsServerAddress DnsServerAddress
+        {
+            Address        = $DNSServer
+            InterfaceAlias = $InterfaceAlias
+            AddressFamily  = 'IPv4'
+        }
+
+        WaitForADDomain WaitADDomain
+        {
+            DomainName = $DomainName
+            Credential = $DomainCreds
+            WaitTimeout = 2400
+            RestartCount = 30
+            WaitForValidCredentials = $True
+            DependsOn = @("[xDnsServerAddress]DnsServerAddress","[WindowsFeature]RSAT-AD-PowerShell")
+        }
+
+        xComputer DomainJoin
+        {
+            Name = $env:COMPUTERNAME
+            DomainName = $DomainName
+            Credential = $DomainCreds
+            DependsOn = "[WaitForADDomain]WaitADDomain"
+        }
+    }
 }
