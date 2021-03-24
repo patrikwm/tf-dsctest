@@ -460,7 +460,7 @@ Configuration WebApplicationProxy {
 
         cWAPConfiguration ConfigureWAP
         {
-            Ensure   = Presents
+            Ensure   = "Present"
             FederationServiceName = "sts.$ExternalDnsDomain"
             Credential = $DomainCreds
             CertificateThumbprint = $thumbprint
