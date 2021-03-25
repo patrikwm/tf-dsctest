@@ -471,7 +471,7 @@ Configuration WebApplicationProxy {
         PendingReboot RebootAfterConfigureWAP
         {
             Name = 'RebootAfterConfigureWAP'
-            DependsOn = "[cWAPConfiguration]ConfigureWAP"
+            DependsOn = "[xComputer]DomainJoin"
         }
     }
 }
