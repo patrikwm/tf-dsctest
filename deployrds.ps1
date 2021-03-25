@@ -452,20 +452,21 @@ Configuration WebApplicationProxy {
             DependsOn = "[WaitForADDomain]WaitADDomain"
         }
 
-        PendingReboot RebootAfterDomainJoin
-        {
-            Name = 'RebootAfterDomainJoin'
-            DependsOn = "[xComputer]DomainJoin"
-        }
-
-        cWAPConfiguration ConfigureWAP
-        {
-            Ensure   = "Present"
-            FederationServiceName = $FederationServiceName
-            Credential = $DomainCreds
-            CertificateThumbprint = $thumbprint
-            DependsOn = @("[PendingReboot]RebootAfterDomainJoin","[PfxImport]importCertificate")
-        }
+        #PendingReboot RebootAfterDomainJoin
+        #{
+        #    Name = 'RebootAfterDomainJoin'
+        #    DependsOn = "[xComputer]DomainJoin"
+        #}
+            #TODO: Fix cWAP module. Meanwhile run command manually.
+            # Install-WebApplicationProxy -CertificateThumbprint $thumbprint -FederationServiceName $adfsFqdn
+        #cWAPConfiguration ConfigureWAP
+        #{
+        #    Ensure   = "Present"
+        #    FederationServiceName = $FederationServiceName
+        #    Credential = $DomainCreds
+        #    CertificateThumbprint = $thumbprint
+        #    DependsOn = @("[xComputer]DomainJoin","[PfxImport]importCertificate")
+        #}
 
         PendingReboot RebootAfterConfigureWAP
         {
