@@ -12,7 +12,8 @@ $modules = "PackageManagement",
            "CertificateDsc",
            "AdfsDsc",
            "cWAP",
-           "xWebAdministration"
+           "xWebAdministration",
+           "xRemoteDesktopSessionHost"
 
 
 foreach ($item in $modules) {
