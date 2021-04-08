@@ -606,7 +606,11 @@ Configuration RDSessionHost
         [System.Management.Automation.PSCredential]$Admincreds,
 
         [Parameter(Mandatory)]
-        [Array]$RDSParameters
+        [Array]$RDSParameters,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$CertCreds
+
     )
 
     $DomainName = $RDSParameters[0].DomainName
@@ -685,7 +689,11 @@ Configuration RDLicenseServer
         [System.Management.Automation.PSCredential]$Admincreds,
 
         [Parameter(Mandatory)]
-        [Array]$RDSParameters
+        [Array]$RDSParameters,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$CertCreds
+
     )
 
     $DomainName = $RDSParameters[0].DomainName
@@ -764,7 +772,11 @@ Configuration RDSDeployment
         [System.Management.Automation.PSCredential]$Admincreds,
 
         [Parameter(Mandatory)]
-        [Array]$RDSParameters
+        [Array]$RDSParameters,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$CertCreds
+
     )
 
     $DomainName = $RDSParameters[0].DomainName
