@@ -22,6 +22,7 @@ Configuration CreateRootDomain {
     $SASTOKEN = $RDSParameters[0].SASTOKEN
     $domain = $RDSParameters[0].domain
     $thumbprint = $RDSParameters[0].thumbprint
+    $public_name_adfs = $RDSParameters[0].public_name_adfs
 
 
     Import-DscResource -ModuleName PsDesiredStateConfiguration,xActiveDirectory,xNetworking,ComputerManagementDSC
@@ -172,7 +173,7 @@ Configuration CreateRootDomain {
 
             xDnsRecord AddIntADFSIP
             {
-                Name = "sts"
+                Name = $public_name_adfs
                 Target = $IntADFSIP
                 Zone = $ExternalDnsDomain
                 Type = "ARecord"
@@ -265,7 +266,7 @@ Configuration CreateRootDomain {
 
         AdfsFarm ConfigureADFS
         {
-            FederationServiceName         = "sts.$ExternalDnsDomain"
+            FederationServiceName         = "$public_name_adfs.$ExternalDnsDomain"
             FederationServiceDisplayName  = "$domain dev ADFS Service"
             CertificateThumbprint         = "$thumbprint"
             GroupServiceAccountIdentifier = "$domain\adfs_gmsa$"
@@ -274,7 +275,7 @@ Configuration CreateRootDomain {
 
         AdfsProperties ADFSFarmProperties
         {
-            FederationServiceName    = "sts.$ExternalDnsDomain"
+            FederationServiceName    = "$public_name_adfs.$ExternalDnsDomain"
             EnableIdPInitiatedSignonPage = $True
             AutoCertificateRollover = $False
             DependsOn = "[AdfsFarm]ConfigureADFS"
